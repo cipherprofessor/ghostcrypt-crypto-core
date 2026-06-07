@@ -1,0 +1,22 @@
+GhostCrypt crypto-core benchmark summary
+host: Darwin arm64    date: 2026-06-07T16:03Z
+rustc: rustc 1.94.1 (e408947bf 2026-03-25)
+profile: bench (release; note Cargo.toml sets opt-level=z, lto=true for the shipping lib)
+----------------------------------------------------------------
+benchmark                                  median (point estimate)
+----------------------------------------------------------------
+primitives/aead_encrypt_1KiB               9.9120 µs
+primitives/aead_decrypt_1KiB               8.3152 µs
+primitives/hkdf_derive_32B                 2.4852 µs
+keygen/identity_keypair                    22.970 µs
+keygen/signed_prekey                       22.744 µs
+keygen/one_time_prekeys_x100               1.0667 ms
+x3dh/initiate                              114.51 µs
+x3dh/respond                               85.182 µs
+double_ratchet/encrypt_1KiB                12.890 µs
+double_ratchet/decrypt_1KiB                83.305 µs
+mls/generate_key_package                   118.30 µs
+mls/create_group                           154.63 µs
+mls/encrypt_message_1KiB                   189.84 µs
+----------------------------------------------------------------
+Full detail + HTML report: target/criterion/report/index.html

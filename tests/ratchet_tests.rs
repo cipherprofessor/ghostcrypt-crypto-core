@@ -95,7 +95,7 @@ fn test_out_of_order_messages() {
 
 #[test]
 fn test_forward_secrecy_unique_keys() {
-    let (mut alice, mut bob) = setup_alice_and_bob();
+    let (mut alice, _bob) = setup_alice_and_bob();
 
     let (_, ct1) = alice.encrypt(b"Same message").unwrap();
     let (_, ct2) = alice.encrypt(b"Same message").unwrap();

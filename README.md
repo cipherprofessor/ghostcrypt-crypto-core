@@ -1,63 +1,137 @@
-# ghostcrypt-crypto-core
+<div align="center">
 
-The cryptographic core of **GhostCrypt**, a research end-to-end encrypted messaging
-system. It is a single memory-safe Rust crate that implements the full client-side
-cryptography once and compiles to every client surface — to **WebAssembly** for the
-browser and to **native libraries via a foreign-function interface** for mobile and
-desktop — so that every platform runs the same audited code.
+# 👻 ghostcrypt-crypto-core
 
-This repository contains **only the cryptographic core**. The GhostCrypt application,
-servers, and infrastructure are not part of this repository.
+### One memory-safe cryptographic core. Every platform.
 
-## What it implements
+The client-side cryptography of **GhostCrypt**, written once in Rust and compiled to
+**WebAssembly** for the browser and to **native libraries** for mobile and desktop — so
+every surface runs the same audited code instead of a separate re-implementation.
 
-- **X3DH** key agreement (with signed-prekey signature verification on the live path)
-- **Double Ratchet** message encryption (forward secrecy + post-compromise security)
-- **MLS** group messaging via [OpenMLS](https://openmls.tech/)
-- **AEAD** (AES-256-GCM) and **HKDF-SHA-256** key derivation
-- Optional **hybrid post-quantum KEM** (ML-KEM-768 + X25519), behind a feature flag
-- Bindings: WebAssembly (`wasm-bindgen`) and FFI (`flutter_rust_bridge`)
+<br/>
 
-## Status
+[![License: MIT](https://img.shields.io/badge/License-MIT-7B2FF7.svg?style=flat-square)](LICENSE)
+[![Rust](https://img.shields.io/badge/Rust-1.94%2B-000000?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![WebAssembly](https://img.shields.io/badge/WASM-ready-654FF0?style=flat-square&logo=webassembly&logoColor=white)](https://webassembly.org/)
+[![Tests](https://img.shields.io/badge/tests-43%20passing-2F9E44?style=flat-square)](#-testing)
+[![Status](https://img.shields.io/badge/status-research%20%C2%B7%20not%20audited-E8590C?style=flat-square)](#-security)
 
-This is a **research reference implementation**, not a production library. It has **not
-been independently audited**. Do not use it to protect real user data. It accompanies a
-research paper on single-core, multi-surface E2E messaging architecture.
+</div>
 
-## Build and test
+---
+
+## ✨ What it is
+
+A single Rust crate that implements the full end-to-end-encryption stack a messenger
+needs, behind one clean interface. The same compiled core powers the web client (via
+WebAssembly) and the mobile and desktop clients (via a foreign-function interface), which
+collapses the audit surface from *one per platform* to *one*.
+
+> **This repository contains only the cryptographic core.** GhostCrypt's application,
+> servers, and infrastructure are not part of it.
+
+```
+                 ┌─────────────────────────────────────────────┐
+   Browser  ◀────┤                                             │
+   Android  ◀────┤   ghostcrypt-crypto-core  (one Rust crate)  │
+   iOS      ◀────┤   X3DH · Double Ratchet · MLS · AEAD · PQC  │
+   Desktop  ◀────┤                                             │
+                 └─────────────────────────────────────────────┘
+                   WebAssembly  +  native FFI, from one source
+```
+
+## 🔐 Features
+
+| Capability | Detail |
+| --- | --- |
+| **X3DH key agreement** | Authenticated session setup — the signed-prekey signature is verified on the live path |
+| **Double Ratchet** | Per-message keys, forward secrecy, and post-compromise security |
+| **MLS group messaging** | Tree-based group key agreement via [OpenMLS](https://openmls.tech/) |
+| **AEAD + KDF** | AES-256-GCM with HKDF-SHA-256; HMAC-SHA-256 symmetric ratchet |
+| **Post-quantum (optional)** | Hybrid ML-KEM-768 + X25519, behind the `post-quantum` feature flag |
+| **Multi-surface bindings** | WebAssembly (`wasm-bindgen`) and FFI (`flutter_rust_bridge`) |
+| **Memory-safe** | Built on audited crates: `x25519-dalek`, `ed25519-dalek`, RustCrypto, OpenMLS |
+
+## 🚀 Quick start
 
 ```bash
 # Build
 cargo build
 
-# Run the test suite (X3DH, Double Ratchet, MLS, AEAD, KDF, identity, PQC, end-to-end)
+# Run the full test suite (43 tests)
 cargo test
 
-# Optional: include the post-quantum hybrid KEM
+# Include the post-quantum hybrid KEM
 cargo test --features post-quantum
 ```
 
-## Benchmarks
+## ⚡ Benchmarks
 
-Reproducible micro-benchmarks (Criterion) for the operations on the critical path:
+Reproducible Criterion micro-benchmarks for the operations on the critical path. Run them
+yourself with `./run-benchmarks.sh`. Medians below are from an Apple M-series core
+(release build):
 
-```bash
-./run-benchmarks.sh          # core paths
-./run-benchmarks.sh --pq     # also benchmark the post-quantum hybrid KEM
+| Operation | Median |
+| --- | ---: |
+| AES-256-GCM encrypt (1 KiB) | **9.9 µs** |
+| AES-256-GCM decrypt (1 KiB) | 8.3 µs |
+| HKDF-SHA-256 | 2.5 µs |
+| Identity keypair generate | 23.0 µs |
+| Double Ratchet encrypt (1 KiB) | **12.9 µs** |
+| Double Ratchet decrypt (1 KiB) | 83.3 µs |
+| X3DH initiate (incl. signature verify) / respond | 115 / 85 µs |
+| MLS key package generate | 118 µs |
+| MLS create group | 155 µs |
+| MLS encrypt message (1 KiB) | 190 µs |
+
+Every per-message operation finishes in tens of microseconds, and even the heaviest group
+operation in under 0.2 ms — orders of magnitude below network latency.
+
+## 🧪 Testing
+
+```text
+aead · identity · kdf · x3dh · ratchet · mls · pqc · end-to-end
+43 tests, 0 failures
 ```
 
-Results are written to `bench-summary.txt`, and a full HTML report to
-`target/criterion/report/index.html`. On an Apple M-series core, all per-message
-operations complete in tens of microseconds and the heaviest MLS operation in under
-0.2 ms.
+The suite includes a negative test (`test_x3dh_rejects_unauthentic_signed_prekey`) that
+confirms a forged prekey signature is rejected.
 
-## Security note
+## 📂 Project structure
 
-The crate uses audited primitive libraries (`x25519-dalek`, `ed25519-dalek`,
-RustCrypto `aes-gcm` / `hkdf` / `hmac`, OpenMLS). The X3DH path verifies the signed
-prekey's signature before use. Testing is currently example-based; known-answer and
-property-based tests are planned. Treat this as a learning and research artifact.
+```
+src/
+├── lib.rs          crate root
+├── aead/           AES-256-GCM authenticated encryption
+├── kdf/            HKDF-SHA-256 key derivation
+├── identity/       identity keys, signed prekeys, one-time prekeys
+├── x3dh/           X3DH key agreement (+ prekey-signature verification)
+├── ratchet/        Double Ratchet session state machine
+├── mls/            MLS group messaging (OpenMLS wrapper)
+├── pqc/            hybrid post-quantum KEM (feature-gated)
+├── api.rs          FFI surface (flutter_rust_bridge)
+└── wasm.rs         WebAssembly surface (wasm-bindgen)
+benches/            Criterion benchmarks
+tests/              integration tests
+```
 
-## License
+## 🛡️ Security
 
-MIT. See [LICENSE](LICENSE).
+This is a **research reference implementation**, and it has **not been independently
+audited**. Please do not use it to protect real user data. Primitives come from
+well-regarded audited crates, the X3DH path authenticates the signed prekey before use,
+and testing is currently example-based (known-answer and property-based tests are
+planned). Treat it as a learning and research artifact.
+
+## 📄 Paper
+
+This crate is the reference implementation accompanying a research paper on single-core,
+multi-surface architecture for end-to-end encrypted messaging. *(Citation to be added.)*
+
+## ⚖️ License
+
+Released under the [MIT License](LICENSE) © 2026 Mohsin Manzoor Bhat.
+
+<div align="center">
+<sub>Built with Rust 🦀 — speak freely.</sub>
+</div>

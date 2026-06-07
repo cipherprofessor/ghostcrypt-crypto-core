@@ -59,6 +59,7 @@ fn bench_keygen(c: &mut Criterion) {
 fn make_bundle(bob_id: &IdentityKeyPair, bob_spk: &SignedPreKey) -> PreKeyBundle {
     PreKeyBundle {
         identity_key: *bob_id.public_key(),
+        identity_verifying_key: bob_id.verifying_key(),
         signed_pre_key: *bob_spk.public_key(),
         signature: bob_spk.signature().to_vec(),
         one_time_pre_key: None,
